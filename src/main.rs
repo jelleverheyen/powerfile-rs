@@ -1,86 +1,21 @@
-use logos::{Lexer, Logos, Span};
+use crate::visitor::{TextInterpreter, Visitor};
 
-type Error = (String, Span);
-type Result<T> = std::result::Result<T, Error>;
-
-#[derive(Logos, Debug, PartialEq)]
-enum Token<'source> {
-    #[regex(r"[a-zA-Z0-9_\-\.\s/\\]+", |lex| lex.slice())]
-    String(&'source str),
-
-    #[token("(")]
-    ParenOpen,
-
-    #[token(")")]
-    ParenClose,
-
-    #[token("[")]
-    BracketOpen,
-
-    #[token("]")]
-    BracketClose,
-
-    #[token(",")]
-    Comma,
-}
-
-#[derive(Debug)]
-enum Value<'source> {
-    ExpandableGroup(Vec<Value<'source>>),
-    TextGroup(Vec<Value<'source>>),
-    String(&'source str),
-}
-
-fn parse_group<'source>(
-    lexer: &mut Lexer<'source, Token<'source>>,
-    explicit_close: bool,
-) -> Result<Value<'source>> {
-    // Used to build the text group
-    let mut children = Vec::new();
-    // Used to build the expandable group
-    let mut current_group = Vec::new();
-
-    while let Some(token) = lexer.next() {
-        match token {
-            Ok(Token::String(s)) => current_group.push(Value::String(s)),
-            Ok(Token::Comma) => {
-                if !children.is_empty() {
-                    children.push(Value::ExpandableGroup(std::mem::take(&mut current_group)));
-                }
-            }
-            Ok(Token::ParenOpen) => current_group.push(parse_group(lexer, true)?),
-            Ok(Token::ParenClose) if explicit_close => {
-                if !current_group.is_empty() {
-                    children.push(Value::ExpandableGroup(current_group))
-                }
-
-                return Ok(Value::TextGroup(children));
-            }
-            Ok(Token::ParenClose) => {
-                return Err(("Unexpected group closer ')'".to_owned(), lexer.span()))
-            }
-            _ => return Err(("Unexpected token".to_owned(), lexer.span())),
-        }
-    }
-
-    if explicit_close {
-        return Err(("Expected ')' before end of input".to_owned(), lexer.span()));
-    }
-
-    if !current_group.is_empty() {
-        children.push(Value::ExpandableGroup(current_group))
-    }
-
-    Ok(Value::TextGroup(children))
-}
+mod parser;
+mod lexer;
+mod visitor;
 
 fn main() {
     let pattern = "Environments/(Dev,Prod/(Features,Tests,Services))/test.json";
 
-    let mut lexer = Token::lexer(pattern);
+    match parser::parse(pattern) {
+        Ok(value) => {
+            println!("OK: {:#?}", value);
 
-    match parse_group(&mut lexer, false) {
-        Ok(value) => println!("OK: {:#?}", value),
+            let mut interpreter = TextInterpreter;
+            for line in interpreter.visit_value(value) {
+                println!("{}", line)
+            }
+        },
         Err((msg, span)) => {
             use ariadne::{ColorGenerator, Label, Report, ReportKind, Source};
 
