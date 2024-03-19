@@ -32,7 +32,7 @@ fn parse_group<'source>(
         match token {
             Ok(Token::Text(s)) => current_group.push(Value::Text(s)),
             Ok(Token::Comma) => {
-                if !children.is_empty() {
+                if !current_group.is_empty() {
                     children.push(Value::ExpandableGroup(std::mem::take(&mut current_group)));
                 }
             }
