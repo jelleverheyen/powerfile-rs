@@ -11,7 +11,7 @@ fn main() {
         Ok(value) => {
             println!("OK: {:#?}", value);
 
-            let mut interpreter = TextInterpreter;
+            let interpreter = TextInterpreter;
             for line in interpreter.interpret(&value) {
                 println!("{}", line)
             }

@@ -1,13 +1,13 @@
 use crate::parser::Value;
 
 pub trait Interpreter<'source, T> {
-    fn interpret(&mut self, value: &Value<'source>) -> T;
+    fn interpret(&self, value: &Value<'source>) -> T;
 }
 
 pub struct TextInterpreter;
 
 impl<'source> Interpreter<'source, Vec<String>> for TextInterpreter {
-    fn interpret(&mut self, value: &Value<'source>) -> Vec<String> {
+    fn interpret(&self, value: &Value<'source>) -> Vec<String> {
         match value {
             Value::Text(s) => vec![s.to_string()],
             Value::TextGroup(group) => {
