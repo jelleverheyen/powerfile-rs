@@ -1,21 +1,21 @@
-use crate::visitor::{TextInterpreter, Visitor};
+use crate::interpreter::{Interpreter, TextInterpreter};
 
-mod parser;
 mod lexer;
-mod visitor;
+mod parser;
+mod interpreter;
 
 fn main() {
-    let pattern = "Environments/(Dev,Prod/(Features,Tests,Services))/test.json";
+    let pattern = "(Environments/(Dev,Prod)/(Files/(env,settings).json))";
 
     match parser::parse(pattern) {
         Ok(value) => {
             println!("OK: {:#?}", value);
 
             let mut interpreter = TextInterpreter;
-            for line in interpreter.visit_value(value) {
+            for line in interpreter.interpret(&value) {
                 println!("{}", line)
             }
-        },
+        }
         Err((msg, span)) => {
             use ariadne::{ColorGenerator, Label, Report, ReportKind, Source};
 

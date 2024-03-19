@@ -1,4 +1,4 @@
-use logos::{Logos};
+use logos::Logos;
 
 #[derive(Logos, Debug, PartialEq)]
 pub enum Token<'source> {
