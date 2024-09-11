@@ -2,7 +2,7 @@ use logos::Logos;
 
 #[derive(Logos, Debug, PartialEq)]
 pub enum Token<'source> {
-    #[regex(r"[a-zA-Z0-9_\-\.\s/\\]+", |lex| lex.slice())]
+    #[regex(r"[a-zA-Z0-9_\-\s/\\]+", |lex| lex.slice())]
     Text(&'source str),
 
     #[token("(")]
@@ -13,6 +13,12 @@ pub enum Token<'source> {
 
     #[token("[")]
     BracketOpen,
+
+    #[token("..")]
+    Range,
+
+    #[token(".")]
+    Dot,
 
     #[token("]")]
     BracketClose,

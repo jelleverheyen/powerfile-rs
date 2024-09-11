@@ -1,20 +1,27 @@
-use crate::interpreter::{Interpreter, TextInterpreter};
+use crate::interpreter::{Interpreter, SizeInterpreter, TextInterpreter};
 
+mod interpreter;
 mod lexer;
 mod parser;
-mod interpreter;
 
 fn main() {
-    let pattern = "(Environments/(Dev,Prod)/(Files/(env,settings).json))";
+    // TODO: Implement UNDO/REDO?
+    //let pattern = "(Environments/(Dev,Prod)/(Files/(env,settings)[a..z][0..10].json))";
+    //let pattern = "[a..z][A..Z][a..z,a..z].cs";
+    let pattern = "[a..z]/(a,b).cs";
 
     match parser::parse(pattern) {
         Ok(value) => {
             println!("OK: {:#?}", value);
 
-            let interpreter = TextInterpreter;
-            for line in interpreter.interpret(&value) {
+            let start = std::time::Instant::now();
+            let text = TextInterpreter;
+            let size = SizeInterpreter;
+            println!("Size: {}", size.interpret(&value));
+            for line in text.interpret(&value) {
                 println!("{}", line)
             }
+            eprintln!("{:?}", start.elapsed());
         }
         Err((msg, span)) => {
             use ariadne::{ColorGenerator, Label, Report, ReportKind, Source};
