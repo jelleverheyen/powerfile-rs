@@ -17,7 +17,6 @@ impl<'source> Interpreter<'source, Vec<String>> for TextInterpreter {
             Value::ExpandableGroup(group) => group.iter().fold(Vec::new(), |current, expander| {
                 cartesian_product(current, self.interpret(expander))
             }),
-
             Value::CharRange(start, end) => (*start..=*end).map(|x| x.to_string()).collect(),
             Value::NumberRange(start, end) => (*start..=*end).map(|x| x.to_string()).collect(),
         }

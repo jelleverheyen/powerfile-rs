@@ -2,9 +2,6 @@ use logos::Logos;
 
 #[derive(Logos, Debug, PartialEq)]
 pub enum Token<'source> {
-    #[regex(r"[a-zA-Z0-9_\-\s/\\]+", |lex| lex.slice())]
-    Text(&'source str),
-
     #[token("(")]
     ParenOpen,
 
@@ -25,4 +22,8 @@ pub enum Token<'source> {
 
     #[token(",")]
     Comma,
+
+    // Excludes tokens defined above
+    #[regex(r"[^\s\.\,\[\]\(\)]+", |lex| lex.slice())]
+    Text(&'source str),
 }

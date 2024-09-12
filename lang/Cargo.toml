@@ -1,0 +1,12 @@
+[package]
+name = "lang"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+logos = "0.14.1"
+unicode-segmentation = "1.11.0"
+
+[lib]
+name = "lang"
+path = "src/lib.rs"

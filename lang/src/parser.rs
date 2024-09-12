@@ -77,16 +77,17 @@ enum RangeMember<'source> {
 }
 
 fn parse_range<'source>(lexer: &mut Lexer<'source, Token<'source>>) -> Result<Value<'source>> {
+    // Used as a precaution to make sure the format is Left - Range (..) - Right
     let mut passed_range_operator = false;
 
     let mut start = None;
     let mut end = None;
 
-    let mut children = Vec::new();
+    let mut ranges = Vec::new();
 
     while let Some(token) = lexer.next() {
         match token {
-            Ok(Token::BracketOpen) => children.push(parse_range(lexer)?),
+            Ok(Token::BracketOpen) => ranges.push(parse_range(lexer)?),
             Ok(Token::Text(s)) => {
                 let member = match s.parse::<u32>() {
                     Ok(num) => RangeMember::Number(num),
@@ -108,12 +109,12 @@ fn parse_range<'source>(lexer: &mut Lexer<'source, Token<'source>>) -> Result<Va
             }
             Ok(Token::Comma) if passed_range_operator => {
                 passed_range_operator = false;
-                children.push(new_range(lexer, start.take(), end.take())?)
+                ranges.push(new_range(lexer, start.take(), end.take())?)
             }
             Ok(Token::BracketClose) if passed_range_operator => {
-                children.push(new_range(lexer, start.take(), end.take())?);
+                ranges.push(new_range(lexer, start.take(), end.take())?);
 
-                return Ok(ExpandableGroup(children));
+                return Ok(ExpandableGroup(ranges));
             }
             Ok(Token::Comma) | Ok(Token::BracketClose) if !passed_range_operator => {
                 return Err((
