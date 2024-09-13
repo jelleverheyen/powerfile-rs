@@ -1,10 +1,26 @@
 use std::collections::HashMap;
+use bincode::{Decode, Encode};
 use unicode_segmentation::UnicodeSegmentation;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Encode, Decode, Debug, Default, Clone)]
 pub struct Trie<T> {
     root: TrieNode<T>,
     len: usize,
+}
+
+#[derive(Encode, Decode, Debug, Default, Clone)]
+pub struct TrieNode<T> {
+    children: HashMap<String, TrieNode<T>>,
+    data: Option<T>,
+}
+
+impl<T> TrieNode<T> {
+    pub fn new() -> Self {
+        TrieNode {
+            children: Default::default(),
+            data: None,
+        }
+    }
 }
 
 impl<T> Trie<T> {
@@ -27,18 +43,15 @@ impl<T> Trie<T> {
         self.len += 1;
     }
 
-    pub fn get(&self, key: &str) -> Option<(&T, u32)> {
+    pub fn get(&self, key: &str) -> Option<&T> {
         let mut current = &self.root;
         let mut last = None;
 
-        for (depth, character) in UnicodeSegmentation::graphemes(key, true).enumerate() {
+        for character in UnicodeSegmentation::graphemes(key, true) {
             match current.children.get(character) {
                 Some(node) => {
-                    match node.data {
-                        Some(ref data) => {
-                            last = Some((data, (depth + 1) as u32))
-                        },
-                        _ => {}
+                    if let Some(ref data) = node.data {
+                        last = Some(data)
                     }
 
                     current = node
@@ -48,21 +61,6 @@ impl<T> Trie<T> {
         }
 
         last
-    }
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct TrieNode<T> {
-    children: HashMap<String, TrieNode<T>>,
-    data: Option<T>,
-}
-
-impl<T> TrieNode<T> {
-    pub fn new() -> Self {
-        TrieNode {
-            children: Default::default(),
-            data: None,
-        }
     }
 }
 
@@ -76,8 +74,8 @@ mod tests {
         trie.insert("apple", 1);
         trie.insert("app", 2);
 
-        assert_eq!(trie.get("apple"), Some((&1, 5)));
-        assert_eq!(trie.get("app"), Some((&2, 3)));
+        assert_eq!(trie.get("apple"), Some(&1));
+        assert_eq!(trie.get("app"), Some(&2));
     }
 
     #[test]
@@ -86,8 +84,8 @@ mod tests {
         trie.insert("こんにちは", 1);
         trie.insert("こん", 2);
 
-        assert_eq!(trie.get("こんにちは"), Some((&1, 5)));
-        assert_eq!(trie.get("こん"), Some((&2, 2)));
+        assert_eq!(trie.get("こんにちは"), Some(&1));
+        assert_eq!(trie.get("こん"), Some(&2));
     }
 
     #[test]
@@ -97,8 +95,8 @@ mod tests {
         trie.insert("hell", 2);
 
         // Returns the last data found, which is "hell" with depth 4
-        assert_eq!(trie.get("hello"), Some((&1, 5)));
-        assert_eq!(trie.get("hell"), Some((&2, 4)));
+        assert_eq!(trie.get("hello"), Some(&1));
+        assert_eq!(trie.get("hell"), Some(&2));
         assert_eq!(trie.get("he"), None); // 'he' is not stored in the trie
     }
 
@@ -109,9 +107,9 @@ mod tests {
         trie.insert("hell", 2);
         trie.insert("heaven", 3);
 
-        assert_eq!(trie.get("heaven"), Some((&3, 6)));
-        assert_eq!(trie.get("hell"), Some((&2, 4)));
-        assert_eq!(trie.get("hello"), Some((&1, 5)));
+        assert_eq!(trie.get("heaven"), Some(&3));
+        assert_eq!(trie.get("hell"), Some(&2));
+        assert_eq!(trie.get("hello"), Some(&1));
     }
 
     #[test]
@@ -130,9 +128,9 @@ mod tests {
         trie.insert("apartment", 3);
 
         // No exact match for "appl", but returns last found data (app, 3)
-        assert_eq!(trie.get("appl"), Some((&2, 3)));
-        assert_eq!(trie.get("app"), Some((&2, 3)));
-        assert_eq!(trie.get("apartment"), Some((&3, 9)));
+        assert_eq!(trie.get("appl"), Some(&2));
+        assert_eq!(trie.get("app"), Some(&2));
+        assert_eq!(trie.get("apartment"), Some(&3));
     }
 
     #[test]
@@ -153,7 +151,7 @@ mod tests {
         trie.insert("helloworld", 3);
 
         // Matching as far as it can go
-        assert_eq!(trie.get("helloworldish"), Some((&3, 10)));
+        assert_eq!(trie.get("helloworldish"), Some(&3));
     }
 }
 
