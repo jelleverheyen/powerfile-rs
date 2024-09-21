@@ -9,3 +9,10 @@ unicode-segmentation = "1.11.0"
 bincode = "2.0.0-rc.3"
 walkdir = "2.5.0"
 yaml-rust = "0.4.5"
+
+[dependencies.uuid]
+version = "1.10.0"
+features = [
+    "v4",                # Lets you generate random UUIDs
+    "fast-rng",          # Use a faster (but still sufficiently random) RNG
+]

@@ -1,6 +1,4 @@
-mod indexer;
+mod index;
 mod search;
-mod storage;
-mod template_index;
 mod trie;
 mod util;

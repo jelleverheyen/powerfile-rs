@@ -1,25 +1,24 @@
-use crate::template_index::{read_template_index, write_template_index};
+use crate::index::{TemplateIndex, TemplateOptions};
+use std::path::PathBuf;
+use std::str::FromStr;
 
-mod indexer;
+mod index;
 mod search;
-mod storage;
-mod template_index;
 mod trie;
 mod util;
 
 fn main() -> std::io::Result<()> {
-    let index = write_template_index(
-        "template.index",
-        vec![
-            "my_templates/IRequestHandler.cs",
-            "my_templates/csharp_class.cs",
-        ],
-    )?;
+    let index = TemplateIndex::build(TemplateOptions {
+        block_size: 128,
+        cached_templates_dir: PathBuf::from_str("./cache").unwrap(),
+        index_path: PathBuf::from_str("./cache/index").unwrap(),
+        template_source_dir: PathBuf::from_str("./templates").unwrap(),
+    });
 
-    let test = read_template_index("template.index", &vec![0, 1])?;
-    for i in test {
-        println!("{:?}", i)
-    }
+    index.write();
+    let engine = index.to_engine();
+    let result = engine.search(&"IRequestHandler", None);
+    println!("search result: {:?}", result);
 
     Ok(())
 }

@@ -17,7 +17,7 @@ pub struct TemplateEngine {
     tags: Trie<TemplateTrieData>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TemplateMetadata {
     prefixes: Option<Vec<String>>,
     suffixes: Option<Vec<String>>,
@@ -160,14 +160,18 @@ mod tests {
         let engine = TemplateEngine::from_templates(vec![
             TemplateMetadata {
                 prefixes: Some(vec!["IRequest".to_string(), "Request".to_string()]),
-                suffixes: Some(vec!["Handler.cs".to_string(), ".cs".to_string(), "random".to_string()]),
+                suffixes: Some(vec![
+                    "Handler.cs".to_string(),
+                    ".cs".to_string(),
+                    "random".to_string(),
+                ]),
                 tags: Some(vec!["csharp".to_string()]),
             },
             TemplateMetadata {
                 prefixes: None,
                 suffixes: Some(vec![".cs".to_string()]),
                 tags: Some(vec!["csharp".to_string()]),
-            }
+            },
         ]);
 
         let result = engine.search(&"MyFavoriteRequestHandler.cs", Some(&vec!["csharp"]));
