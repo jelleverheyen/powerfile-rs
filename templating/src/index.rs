@@ -58,7 +58,7 @@ impl TemplateIndex {
     }
 
     pub fn write(&self) -> io::Result<()> {
-        let mut file = File::open(&self.options.cached_templates_dir)?;
+        let mut file = File::create_new(&self.options.index_path)?;
 
         let paths = self.templates.iter().map(|t| &t.path).collect::<Vec<_>>();
         for path in paths {
@@ -72,6 +72,7 @@ impl TemplateIndex {
             buffer[..bytes.len()].copy_from_slice(bytes);
             file.write_all(&buffer)?;
         }
+
 
         Ok(())
     }
