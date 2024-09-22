@@ -58,7 +58,7 @@ impl TemplateIndex {
 
     pub fn write(&self) -> Result<(), IndexBuildError> {
         let mut file = File::create_new(&self.options.index_path)
-            .map_err(|err| IndexBuildError::IoError(&self.options.index_path, err))?;
+            .map_err(|err| IndexBuildError::IoError(self.options.index_path.to_path_buf(), err))?;
 
         let paths = self.templates.iter().map(|t| &t.path).collect::<Vec<_>>();
         for path in paths {
@@ -67,14 +67,14 @@ impl TemplateIndex {
             if bytes.len() > self.options.block_size {
                 return Err(IndexBuildError::InvalidIndex(format!(
                     "Template location path '{}' is too long for block-size {}",
-                    path, self.options.block_size
+                    path.to_string_lossy(), self.options.block_size
                 )));
             }
 
             let mut buffer = vec![0; self.options.block_size];
             buffer[..bytes.len()].copy_from_slice(bytes);
             file.write_all(&buffer)
-                .map_err(|err| IndexBuildError::IoError(&self.options.index_path, err))?;
+                .map_err(|err| IndexBuildError::IoError(self.options.index_path.to_path_buf(), err))?;
         }
 
         Ok(())
@@ -184,24 +184,24 @@ fn cache_template(
     output_path: PathBuf,
 ) -> Result<CachedTemplate, IndexBuildError> {
     let source_file =
-        File::open(&source_path).map_err(|err| IndexBuildError::IoError(&source_path, err))?;
+        File::open(source_path.to_path_buf()).map_err(|err| IndexBuildError::IoError(source_path.to_path_buf(), err))?;
 
     let mut reader = BufReader::new(source_file);
 
-    let yaml = get_raw_metadata(&mut reader).map_err(|err| err.to_index_error(&source_path))?;
+    let yaml = get_raw_metadata(&mut reader).map_err(|err| err.to_index_error(source_path.to_path_buf()))?;
 
-    let metadata = parse_metadata_yaml(&yaml).map_err(|err| err.to_index_error(&source_path))?;
+    let metadata = parse_metadata_yaml(&yaml).map_err(|err| err.to_index_error(source_path.to_path_buf()))?;
 
     let output_file =
-        File::create(&output_path).map_err(|err| IndexBuildError::IoError(&output_path, err))?;
+        File::create(&output_path).map_err(|err| IndexBuildError::IoError(output_path.to_path_buf(), err))?;
 
     let mut writer = BufWriter::new(output_file);
     io::copy(&mut reader, &mut writer)
-        .map_err(|err| IndexBuildError::IoError(&output_path, err))?;
+        .map_err(|err| IndexBuildError::IoError(output_path.to_path_buf(), err))?;
 
     writer
         .flush()
-        .map_err(|err| IndexBuildError::IoError(&output_path, err))?;
+        .map_err(|err| IndexBuildError::IoError(output_path.to_path_buf(), err))?;
 
     Ok(CachedTemplate {
         metadata,
@@ -229,10 +229,10 @@ fn parse_metadata_yaml(raw_metadata: &str) -> Result<TemplateMetadata, MetadataE
 }
 
 #[derive(Debug)]
-enum IndexBuildError<'a> {
-    IoError(&'a PathBuf, io::Error),
+pub enum IndexBuildError {
+    IoError(PathBuf, io::Error),
     InvalidIndex(String),
-    TemplateParseError(&'a PathBuf, String),
+    TemplateParseError(PathBuf, String),
 }
 
 #[derive(Debug)]
@@ -243,7 +243,7 @@ enum MetadataError {
 }
 
 impl MetadataError {
-    fn to_index_error(self, template_path: &PathBuf) -> IndexBuildError {
+    fn to_index_error(self, template_path: PathBuf) -> IndexBuildError {
         match self {
             MetadataError::IoError(err) => IndexBuildError::IoError(template_path, err),
             MetadataError::InvalidMetadataError(err) => IndexBuildError::TemplateParseError(
