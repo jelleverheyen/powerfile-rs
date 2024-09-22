@@ -3,7 +3,6 @@ use crate::util;
 use bincode;
 use bincode::{Decode, Encode};
 use std::collections::HashMap;
-use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Encode, Decode)]
 struct TemplateTrieData {

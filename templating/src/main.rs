@@ -15,12 +15,14 @@ fn main() -> std::io::Result<()> {
         template_source_dir: PathBuf::from_str("./templates").unwrap(),
     });
 
-    index.write();
+    let _ = index.write();
     let engine = index.to_engine();
     let result = engine.search(&"IRequestHandler", None).unwrap();
     println!("search result: {:?}", result);
 
-    let res = index.get_templates_path(&mut vec![result]).expect("TODO: panic message");
+    let res = index
+        .get_templates_path(&mut vec![result])
+        .expect("TODO: panic message");
 
     println!("search result: {:?}", res);
     Ok(())

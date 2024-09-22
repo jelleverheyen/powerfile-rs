@@ -1,4 +1,3 @@
-use crate::index::TemplateError::ParseError;
 use crate::search::{TemplateEngine, TemplateMetadata};
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, BufWriter, Read, Seek, Write};
@@ -57,22 +56,26 @@ impl TemplateIndex {
         TemplateIndex { templates, options }
     }
 
-    pub fn write(&self) -> io::Result<()> {
-        let mut file = File::create_new(&self.options.index_path)?;
+    pub fn write(&self) -> Result<(), IndexBuildError> {
+        let mut file = File::create_new(&self.options.index_path)
+            .map_err(|err| IndexBuildError::IoError(&self.options.index_path, err))?;
 
         let paths = self.templates.iter().map(|t| &t.path).collect::<Vec<_>>();
         for path in paths {
             let temp = path.to_string_lossy();
             let bytes = temp.as_bytes();
             if bytes.len() > self.options.block_size {
-                return Err(io::Error::new(io::ErrorKind::InvalidInput, "Path too long"));
+                return Err(IndexBuildError::InvalidIndex(format!(
+                    "Template location path '{}' is too long for block-size {}",
+                    path, self.options.block_size
+                )));
             }
 
             let mut buffer = vec![0; self.options.block_size];
             buffer[..bytes.len()].copy_from_slice(bytes);
-            file.write_all(&buffer)?;
+            file.write_all(&buffer)
+                .map_err(|err| IndexBuildError::IoError(&self.options.index_path, err))?;
         }
-
 
         Ok(())
     }
@@ -116,16 +119,17 @@ impl TemplateIndex {
             .iter()
             .map(|t| t.metadata.clone())
             .collect::<Vec<_>>();
+
         TemplateEngine::from_templates(metadata)
     }
 }
 
-fn get_raw_metadata<R: BufRead>(reader: &mut R) -> Result<String, TemplateError> {
+fn get_raw_metadata<R: BufRead>(reader: &mut R) -> Result<String, MetadataError> {
     let mut in_block = false;
     let mut block_text = String::new();
 
     for line in reader.by_ref().lines() {
-        let line = line?;
+        let line = line.map_err(|err| MetadataError::IoError(err))?;
 
         // Look for the start of the block
         if line.trim() == "---" {
@@ -146,7 +150,9 @@ fn get_raw_metadata<R: BufRead>(reader: &mut R) -> Result<String, TemplateError>
     }
 
     // If we finish reading the file without finding the second `---`
-    Err(ParseError("No template metadata found".to_string()))
+    Err(MetadataError::InvalidMetadataError(
+        "No template metadata found".to_string(),
+    ))
 }
 
 fn scan_template_dir(dir: PathBuf) -> Vec<PathBuf> {
@@ -176,18 +182,26 @@ pub struct CachedTemplate {
 fn cache_template(
     source_path: PathBuf,
     output_path: PathBuf,
-) -> Result<CachedTemplate, TemplateError> {
-    let source_file = File::open(source_path).map_err(TemplateError::from)?;
+) -> Result<CachedTemplate, IndexBuildError> {
+    let source_file =
+        File::open(&source_path).map_err(|err| IndexBuildError::IoError(&source_path, err))?;
+
     let mut reader = BufReader::new(source_file);
 
-    let yaml = get_raw_metadata(&mut reader)?;
-    let metadata = parse_metadata(&yaml)?;
+    let yaml = get_raw_metadata(&mut reader).map_err(|err| err.to_index_error(&source_path))?;
 
-    let output_file = File::create(&output_path).map_err(TemplateError::from)?;
+    let metadata = parse_metadata_yaml(&yaml).map_err(|err| err.to_index_error(&source_path))?;
+
+    let output_file =
+        File::create(&output_path).map_err(|err| IndexBuildError::IoError(&output_path, err))?;
+
     let mut writer = BufWriter::new(output_file);
-    io::copy(&mut reader, &mut writer)?;
+    io::copy(&mut reader, &mut writer)
+        .map_err(|err| IndexBuildError::IoError(&output_path, err))?;
 
-    writer.flush().map_err(TemplateError::from)?;
+    writer
+        .flush()
+        .map_err(|err| IndexBuildError::IoError(&output_path, err))?;
 
     Ok(CachedTemplate {
         metadata,
@@ -195,10 +209,10 @@ fn cache_template(
     })
 }
 
-fn parse_metadata(raw_metadata: &str) -> Result<TemplateMetadata, TemplateError> {
-    let raw = YamlLoader::load_from_str(raw_metadata).unwrap();
-    //.map_err(|err| ParseError(err.to_string()))?;
-
+fn parse_metadata_yaml(raw_metadata: &str) -> Result<TemplateMetadata, MetadataError> {
+    let raw = YamlLoader::load_from_str(raw_metadata).map_err(|err| {
+        MetadataError::MetadataParseError(format!("Failed to parse template YAML metadata: {}", err))
+    })?;
     let doc = &raw[0];
 
     let parse_vec = |key: &str| -> Option<Vec<String>> {
@@ -214,31 +228,32 @@ fn parse_metadata(raw_metadata: &str) -> Result<TemplateMetadata, TemplateError>
     ))
 }
 
-// pub fn write_template_index(index_path: &str, template_paths: Vec<&str>) -> io::Result<()> {
-//     let mut file = File::open(index_path)?;
-//
-//     for path in template_paths {
-//         let bytes = path.as_bytes();
-//         if bytes.len() > BLOCK_SIZE {
-//             return Err(io::Error::new(io::ErrorKind::InvalidInput, "Path too long"));
-//         }
-//
-//         let mut buffer = vec![0; BLOCK_SIZE];
-//         buffer[..bytes.len()].copy_from_slice(bytes);
-//         file.write_all(&buffer)?;
-//     }
-//
-//     Ok(())
-// }
-
 #[derive(Debug)]
-enum TemplateError {
-    IoError(io::Error),
-    ParseError(String),
+enum IndexBuildError<'a> {
+    IoError(&'a PathBuf, io::Error),
+    InvalidIndex(String),
+    TemplateParseError(&'a PathBuf, String),
 }
 
-impl From<io::Error> for TemplateError {
-    fn from(err: io::Error) -> TemplateError {
-        TemplateError::IoError(err)
+#[derive(Debug)]
+enum MetadataError {
+    IoError(io::Error),
+    InvalidMetadataError(String),
+    MetadataParseError(String),
+}
+
+impl MetadataError {
+    fn to_index_error(self, template_path: &PathBuf) -> IndexBuildError {
+        match self {
+            MetadataError::IoError(err) => IndexBuildError::IoError(template_path, err),
+            MetadataError::InvalidMetadataError(err) => IndexBuildError::TemplateParseError(
+                template_path,
+                format!("Failed to find metadata on template: {}", err),
+            ),
+            MetadataError::MetadataParseError(err) => IndexBuildError::TemplateParseError(
+                template_path,
+                format!("Failed to parse template metadata: {}", err),
+            ),
+        }
     }
 }
