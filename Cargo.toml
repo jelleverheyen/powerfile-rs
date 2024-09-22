@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "cli",
-    "lang"
-, "templating"]
+    "core",
+    "templating"]
 
 resolver = "2"

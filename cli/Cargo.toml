@@ -1,10 +1,10 @@
 [package]
-name = "cli"
+name = "powerfile"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 ariadne = "0.4.1"
-clap = { version = "4.5.17", features = ["derive"] }
-lang = { path = "../lang"}
-templating = { path = "../templating"}
+clap = { version = "4.5.18", features = ["derive"] }
+powerfile_core = { path = "../core" }
+powerfile_templating = { path = "../templating"}

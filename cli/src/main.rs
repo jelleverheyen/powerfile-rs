@@ -1,12 +1,46 @@
-use clap::Parser;
-use lang::interpreter::{Interpreter, SizeInterpreter, TextInterpreter};
-use lang::parser;
+mod create;
 
-#[derive(Parser, Debug)]
+use clap::{Args, Parser, Subcommand};
+use powerfile_core::interpreter::Interpreter;
+
+#[derive(Parser)]
+#[command(name = "PowerFile")]
+#[command(version = "0.0.1")]
 #[command(version, about, long_about = None)]
-struct Args {
-    #[arg(short, long)]
+#[command(propagate_version = true)]
+pub struct PowerFileCli {
+    #[command(subcommand)]
+    pub(crate) command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Create files and directories from a pattern
+    Create(CreateArgs),
+    /// Preview your pattern
+    Preview(PreviewArgs),
+    /// Manage your template index
+    Index(IndexArgs),
+}
+
+#[derive(Args)]
+struct CreateArgs {
     pattern: String,
+    #[arg(default_value_t = 100)]
+    limit: u32,
+    #[arg(short, long)]
+    debug: bool,
+    tags: Vec<String>,
+}
+
+#[derive(Args)]
+struct PreviewArgs {
+
+}
+
+#[derive(Args)]
+struct IndexArgs {
+
 }
 
 fn main() {
@@ -18,31 +52,21 @@ fn main() {
     let pattern = "chinese_studies/chars/[0{a..b}..10]_(我,吃,了,一,个,苹,果).char";
     //let pattern = args.pattern;
 
-    match parser::parse(&pattern) {
-        Ok(value) => {
-            println!("{:#?}", value);
+    let cli = PowerFileCli::parse();
+    let kak = match &cli.command {
+        Commands::Create(args) => 1,
+        Commands::Preview(args) => 1,
+        Commands::Index(args) => 1
+    };
+}
 
-            let start = std::time::Instant::now();
-            let text = TextInterpreter;
-            let size = SizeInterpreter;
-            println!("Size: {}", size.interpret(&value));
-            for line in text.interpret(&value) {
-                println!("{}", line)
-            }
-            eprintln!("{:?}", start.elapsed());
-        }
-        Err((msg, span)) => {
-            use ariadne::{ColorGenerator, Label, Report, ReportKind, Source};
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-            let mut colors = ColorGenerator::new();
-            let a = colors.next();
-
-            Report::build(ReportKind::Error, &pattern, span.end)
-                .with_message("Invalid pattern".to_string())
-                .with_label(Label::new((&pattern, span)).with_message(msg).with_color(a))
-                .finish()
-                .eprint((&pattern, Source::from(&pattern)))
-                .unwrap();
-        }
+    #[test]
+    fn verify_cli() {
+        use clap::CommandFactory;
+        PowerFileCli::command().debug_assert();
     }
 }
