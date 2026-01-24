@@ -48,10 +48,13 @@ fn cartesian_product(left: Vec<String>, right: Vec<String>) -> Vec<String> {
     }
 
     // Combine the elements of both vectors
-    let mut combined = Vec::new();
+    let mut combined = Vec::with_capacity(left.len() * right.len());
     for l in &left {
         for r in &right {
-            combined.push(format!("{}{}", l, r));
+            let mut s = String::with_capacity(l.len() + r.len());
+            s.push_str(l);
+            s.push_str(r);
+            combined.push(s);
         }
     }
 
