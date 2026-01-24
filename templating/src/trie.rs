@@ -34,17 +34,16 @@ impl<T> Trie<T> {
     pub fn insert(&mut self, key: &str, data: T) {
         let mut current = &mut self.root;
 
-        for character in UnicodeSegmentation::graphemes(key, true).collect::<Vec<&str>>() {
+        for character in UnicodeSegmentation::graphemes(key, true) {
             current = current
                 .children
                 .entry(character.to_string())
                 .or_insert_with(|| TrieNode::new());
-
-            self.len += 1;
         }
 
         // Store data at the end of the path
         current.data = Some(data);
+        self.len += 1;
     }
 
     pub fn from_vec(data: Vec<(String, T)>) -> Self {
@@ -102,13 +101,13 @@ mod tests {
         let mut trie = Trie::new();
 
         trie.insert("test", 0);
-        assert_eq!(trie.len, 4);
+        assert_eq!(trie.len, 1);
 
         trie.insert("test2", 0);
-        assert_eq!(trie.len, 9);
+        assert_eq!(trie.len, 2);
 
         trie.insert("12345", 0);
-        assert_eq!(trie.len, 14)
+        assert_eq!(trie.len, 3)
     }
 
     #[test]
