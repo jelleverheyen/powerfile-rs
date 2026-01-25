@@ -65,13 +65,34 @@ pub struct AstPrettyPrintInterpreter;
 impl<'source> Interpreter<'source, Vec<String>> for AstPrettyPrintInterpreter {
     fn interpret(&self, value: &Value<'source>) -> Vec<String> {
         let mut out = Vec::new();
-        self.print_node(value, "", true, &mut out);
+        out.push(self.label(&value));
+
+        // recurse into children *as children*
+        let children: &[Value<'source>] = match value {
+            Value::TextGroup(v) | Value::ExpandableGroup(v) => v,
+            _ => return out,
+        };
+
+        let len = children.len();
+        for (i, child) in children.iter().enumerate() {
+            self.print_node(child, "", i == len - 1, &mut out);
+        }
 
         return out;
     }
 }
 
 impl AstPrettyPrintInterpreter {
+    fn label<'source>(&self, value: &Value<'source>) -> String {
+        match value {
+            Value::Text(s) => format!("Text({:?})", s),
+            Value::TextGroup(_) => "TextGroup".to_string(),
+            Value::ExpandableGroup(_) => "ExpandableGroup".to_string(),
+            Value::CharRange(a, b) => format!("CharRange({:?}..{:?})", a, b),
+            Value::NumberRange(a, b) => format!("NumberRange({:?}..{:?})", a, b),
+        }
+    }
+
     fn print_node<'source>(
         &self,
         value: &Value<'source>,
@@ -80,13 +101,7 @@ impl AstPrettyPrintInterpreter {
         out: &mut Vec<String>,
     ) {
         let branch = if is_last { "└── " } else { "├── " };
-        let label = match value {
-            Value::Text(s) => format!("Text({:?})", s),
-            Value::TextGroup(_) => "TextGroup".to_string(),
-            Value::ExpandableGroup(_) => "ExpandableGroup".to_string(),
-            Value::CharRange(a, b) => format!("CharRange({:?}..{:?})", a, b),
-            Value::NumberRange(a, b) => format!("NumberRange({:?}..{:?})", a, b),
-        };
+        let label = self.label(&value);
 
         out.push(format!("{}{}{}", prefix, branch, label));
 
