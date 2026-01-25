@@ -1,27 +1,33 @@
-use powerfile_core::interpreter::{Interpreter, SizeInterpreter, TextInterpreter};
-use powerfile_core::parser;
 use crate::CreateArgs;
+use powerfile_core::interpreter::{
+    AstPrettyPrintInterpreter, Interpreter, SizeInterpreter, TextInterpreter,
+};
+use powerfile_core::parser;
 
-pub struct CreateHandler {
-    args: CreateArgs
+pub struct CreateHandler<'a> {
+    pub args: &'a CreateArgs,
 }
 
-impl CreateHandler {
+impl<'a> CreateHandler<'a> {
     pub fn handle(&self) {
         let pattern = &self.args.pattern;
 
         match parser::parse(pattern) {
             Ok(value) => {
-                println!("{:#?}", value);
+                // println!("{:#?}", value);
 
                 let start = std::time::Instant::now();
                 let text = TextInterpreter;
                 let size = SizeInterpreter.interpret(&value);
+                let pretty = AstPrettyPrintInterpreter;
                 if size > self.args.limit {
-                    println!("Pattern size {:#?} exceeds limit of {:#?} ", size, self.args.limit);
+                    println!(
+                        "Pattern size {:#?} exceeds limit of {:#?} ",
+                        size, self.args.limit
+                    );
                 }
 
-                for line in text.interpret(&value) {
+                for line in pretty.interpret(&value) {
                     println!("{}", line)
                 }
                 eprintln!("{:?}", start.elapsed());

@@ -60,3 +60,50 @@ fn cartesian_product(left: Vec<String>, right: Vec<String>) -> Vec<String> {
 
     combined
 }
+
+pub struct AstPrettyPrintInterpreter;
+impl<'source> Interpreter<'source, Vec<String>> for AstPrettyPrintInterpreter {
+    fn interpret(&self, value: &Value<'source>) -> Vec<String> {
+        let mut out = Vec::new();
+        self.print_node(value, "", true, &mut out);
+
+        return out;
+    }
+}
+
+impl AstPrettyPrintInterpreter {
+    fn print_node<'source>(
+        &self,
+        value: &Value<'source>,
+        prefix: &str,
+        is_last: bool,
+        out: &mut Vec<String>,
+    ) {
+        let branch = if is_last { "└── " } else { "├── " };
+        let label = match value {
+            Value::Text(s) => format!("Text({:?})", s),
+            Value::TextGroup(_) => "TextGroup".to_string(),
+            Value::ExpandableGroup(_) => "ExpandableGroup".to_string(),
+            Value::CharRange(a, b) => format!("CharRange({:?}..{:?})", a, b),
+            Value::NumberRange(a, b) => format!("NumberRange({:?}..{:?})", a, b),
+        };
+
+        out.push(format!("{}{}{}", prefix, branch, label));
+
+        let children: &[Value<'source>] = match value {
+            Value::TextGroup(v) | Value::ExpandableGroup(v) => v,
+            _ => return,
+        };
+
+        let next_prefix = if is_last {
+            format!("{}    ", prefix)
+        } else {
+            format!("{}│   ", prefix)
+        };
+
+        let len = children.len();
+        for (i, child) in children.iter().enumerate() {
+            self.print_node(child, &next_prefix, i == len - 1, out);
+        }
+    }
+}

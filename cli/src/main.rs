@@ -3,6 +3,8 @@ mod create;
 use clap::{Args, Parser, Subcommand};
 use powerfile_core::interpreter::Interpreter;
 
+use crate::create::CreateHandler;
+
 #[derive(Parser)]
 #[command(name = "PowerFile")]
 #[command(version = "0.0.1")]
@@ -34,19 +36,12 @@ struct CreateArgs {
 }
 
 #[derive(Args)]
-struct PreviewArgs {
-
-}
+struct PreviewArgs {}
 
 #[derive(Args)]
-struct IndexArgs {
-
-}
+struct IndexArgs {}
 
 fn main() {
-    //let args = Args::parse();
-
-    // TODO: Implement UNDO/REDO?
     //let pattern = "(Environments/(Dev,Prod)/(Files/(env,settings)[a..z][0..10].json))";
     //let pattern = "[a..z][A..Z][a..z,a..z].cs";
     let pattern = "chinese_studies/chars/[0{a..b}..10]_(我,吃,了,一,个,苹,果).char";
@@ -54,9 +49,8 @@ fn main() {
 
     let cli = PowerFileCli::parse();
     let kak = match &cli.command {
-        Commands::Create(args) => 1,
-        Commands::Preview(args) => 1,
-        Commands::Index(args) => 1
+        Commands::Create(args) => CreateHandler { args }.handle(),
+        _ => {}
     };
 }
 
