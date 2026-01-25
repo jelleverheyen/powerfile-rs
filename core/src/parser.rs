@@ -15,7 +15,7 @@ pub enum Value<'source> {
     NumberRange(u32, u32),
 }
 
-pub fn parse(pattern: &str) -> Result<Value> {
+pub fn parse<'source>(pattern: &'source str) -> Result<Value<'source>> {
     let mut lexer = Token::lexer(pattern);
 
     parse_group(&mut lexer, false)

@@ -5,6 +5,6 @@ edition = "2021"
 
 [dependencies]
 ariadne = "0.4.1"
-clap = { version = "4.5.18", features = ["derive"] }
+clap = { version = "4.5.54", features = ["derive"] }
 powerfile_core = { path = "../core" }
 powerfile_templating = { path = "../templating"}
