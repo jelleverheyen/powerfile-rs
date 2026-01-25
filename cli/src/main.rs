@@ -1,9 +1,11 @@
 mod create;
+mod preview;
 
 use clap::{Args, Parser, Subcommand};
 use powerfile_core::interpreter::Interpreter;
 
 use crate::create::CreateHandler;
+use crate::preview::PreviewHandler;
 
 #[derive(Parser)]
 #[command(name = "PowerFile")]
@@ -27,6 +29,7 @@ enum Commands {
 
 #[derive(Args)]
 struct CreateArgs {
+    /// Pattern to create
     pattern: String,
     #[arg(default_value_t = 100)]
     limit: u32,
@@ -36,7 +39,18 @@ struct CreateArgs {
 }
 
 #[derive(Args)]
-struct PreviewArgs {}
+struct PreviewArgs {
+    /// Pattern to expand and preview
+    pattern: String,
+
+    /// Print the parsed AST instead of the expanded paths
+    #[arg(short, long)]
+    ast: bool,
+
+    /// Limit the number of expanded paths shown
+    #[arg(long, default_value_t = 100)]
+    limit: u32,
+}
 
 #[derive(Args)]
 struct IndexArgs {}
@@ -48,8 +62,9 @@ fn main() {
     //let pattern = args.pattern;
 
     let cli = PowerFileCli::parse();
-    let kak = match &cli.command {
+    let result = match &cli.command {
         Commands::Create(args) => CreateHandler { args }.handle(),
+        Commands::Preview(args) => PreviewHandler { args }.handle(),
         _ => {}
     };
 }
